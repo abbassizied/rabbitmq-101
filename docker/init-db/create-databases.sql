@@ -1,0 +1,3 @@
+CREATE DATABASE IF NOT EXISTS rabbitmq_101_productdb;
+CREATE DATABASE IF NOT EXISTS rabbitmq_101_customerdb;
+CREATE DATABASE IF NOT EXISTS rabbitmq_101_orderdb;

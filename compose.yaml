@@ -1,0 +1,66 @@
+services:
+  ####################################
+  ######### RabbitMQ + UI ###########
+  ####################################
+  rabbitmq:
+    image: rabbitmq:3.13
+    container_name: rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5552:5552"    # RabbitMQ Stream port
+      - "5672:5672"    # AMQP port
+      - "15672:15672"  # Management UI
+    environment:
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbitmq_stream advertised_host localhost"
+    command: >
+      sh -c "rabbitmq-plugins enable --offline rabbitmq_stream rabbitmq_stream_management &&
+             docker-entrypoint.sh rabbitmq-server"
+    networks:
+      - rabbitmq-101-net
+
+  ###############################################
+  ######### MySQL Server + phpMyAdmin ##########
+  ###############################################
+  mysql:
+    image: mysql:8.0
+    container_name: mysql_cont
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: rabbitmq_101_productdb
+    ports:
+      - "3306:3306"
+    networks:
+      - rabbitmq-101-net
+    volumes:
+      - ./docker/mysql_data:/var/lib/mysql
+      - ./docker/init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  phpmyadmin:
+    image: phpmyadmin:5.2
+    container_name: phpmyadmin_cont
+    restart: unless-stopped
+    ports:
+      - "8077:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: rootpass
+    networks:
+      - rabbitmq-101-net
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+###############################################
+######### Stack networks ######################
+###############################################
+networks:
+  rabbitmq-101-net:
+    driver: bridge
